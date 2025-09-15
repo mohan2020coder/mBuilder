@@ -1,0 +1,88 @@
+FROM ubuntu:22.04
+
+LABEL maintainer="mohan18.welcome@gmail.com"
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PHP_VERSION=8.4.11
+
+# Install build dependencies, brotli, curl, wget, nodejs, npm
+RUN apt-get update && apt-get install -y \
+    build-essential autoconf bison re2c libxml2-dev libssl-dev \
+    libcurl4-openssl-dev libzip-dev libonig-dev libsqlite3-dev \
+    libreadline-dev libedit-dev libpng-dev libjpeg-dev \
+    libpq-dev \ 
+    wget curl pkg-config \
+    ca-certificates brotli \
+    gnupg git \
+    # Node.js setup dependencies \
+    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs \
+    && npm install -g watcher \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /usr/src
+
+# Download and build PHP with ZTS enabled
+RUN wget https://www.php.net/distributions/php-${PHP_VERSION}.tar.gz && \
+    tar -xzf php-${PHP_VERSION}.tar.gz && \
+    cd php-${PHP_VERSION} && \
+    ./configure --prefix=/usr/local/php \
+                --enable-zts \
+                --enable-mbstring \
+                --enable-opcache \
+                --with-curl \
+                --with-openssl \
+                --with-zlib \
+                --with-pdo-mysql \
+                --with-pdo-pgsql \
+                --with-readline \
+                --enable-cli && \
+    make -j$(nproc) && make install
+
+ENV PATH="/usr/local/php/bin:$PATH"
+
+# Verify PHP installation and ZTS
+RUN php -v && php -i | grep "Thread Safety"
+
+# Install Composer globally
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+
+RUN composer --version
+
+# -------------------------------
+# Install Go 1.25
+# -------------------------------
+ENV GO_VERSION=1.25.0
+RUN wget https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz -O /tmp/go.tgz \
+ && rm -rf /usr/local/go \
+ && tar -C /usr/local -xzf /tmp/go.tgz \
+ && rm /tmp/go.tgz
+
+ENV PATH=/usr/local/go/bin:$PATH
+
+RUN go version
+
+# -------------------------------
+# Install xcaddy
+# -------------------------------
+RUN go install github.com/caddyserver/xcaddy/cmd/xcaddy@latest
+
+# Clone mBuilder repo
+WORKDIR /go/src
+
+RUN git clone https://github.com/mohan2020coder/mBuilder.git
+
+WORKDIR /go/src/mBuilder
+
+# Copy build script into container and make executable
+COPY build-static.sh /go/src/mBuilder/build-static.sh
+RUN chmod +x /go/src/mBuilder/build-static.sh
+
+# Default environment variables for build-static.sh
+ENV EMBED="" \
+    PHP_EXTENSIONS="" \
+    XCADDY_ARGS=""
+
+# Set working directory and default command
+WORKDIR /go/src/mBuilder
+CMD ["./build-static.sh", "--help"]
