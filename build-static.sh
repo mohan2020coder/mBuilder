@@ -104,16 +104,23 @@ elif [ -d ".git/" ]; then
 
 	if echo "${FRANKENPHP_VERSION}" | grep -F -q "."; then
 		# Tag
-
-		# Trim "v" prefix if any
 		FRANKENPHP_VERSION=${FRANKENPHP_VERSION#v}
 		export FRANKENPHP_VERSION
 
-		git checkout "v${FRANKENPHP_VERSION}"
+		if git rev-parse "v${FRANKENPHP_VERSION}" >/dev/null 2>&1; then
+			git checkout "v${FRANKENPHP_VERSION}"
+		else
+			echo "Tag v${FRANKENPHP_VERSION} not found. Skipping git checkout."
+		fi
 	else
-		git checkout "${FRANKENPHP_VERSION}"
+		if git rev-parse "${FRANKENPHP_VERSION}" >/dev/null 2>&1; then
+			git checkout "${FRANKENPHP_VERSION}"
+		else
+			echo "Ref ${FRANKENPHP_VERSION} not found. Skipping git checkout."
+		fi
 	fi
 fi
+
 
 bin="frankenphp-${os}-${arch}"
 
@@ -323,8 +330,8 @@ CGO_ENABLED=1 \
 	${XCADDY_COMMAND} build \
 	--output "../dist/${bin}" \
 	${XCADDY_ARGS} \
-	--with github.com/dunglas/frankenphp=.. \
-	--with github.com/dunglas/frankenphp/caddy=.
+	--with github.com/mohan2020coder/mBuilder=.. \
+	--with github.com/mohan2020coder/mBuilder/caddy=.
 cd ..
 
 if [ -d "${EMBED}" ]; then
@@ -343,6 +350,6 @@ if [ -n "${RELEASE}" ]; then
 	gh release upload "v${FRANKENPHP_VERSION}" "dist/${bin}" --repo dunglas/frankenphp --clobber
 fi
 
-if [ -n "${CURRENT_REF}" ]; then
-	git checkout "${CURRENT_REF}"
+if [ -n "${CURRENT_REF}" ] && git rev-parse "${CURRENT_REF}" >/dev/null 2>&1; then
+    git checkout "${CURRENT_REF}"
 fi
