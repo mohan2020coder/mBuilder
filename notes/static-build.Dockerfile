@@ -17,5 +17,5 @@ RUN apt-get update && apt-get install -y \
 ENV FRANKENPHP_VERSION=1.0.0
 
 # Go back up and run the builder script from mBuilder
-WORKDIR /go/src/app
-RUN EMBED=dist/app/ /go/src/mBuilder/build-static.sh
+WORKDIR /go/src/mBuilder
+RUN EMBED=/go/src/app/dist/app /go/src/mBuilder/build-static.sh

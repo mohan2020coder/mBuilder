@@ -1,7 +1,8 @@
 brew install shivammathur/php/php-zts brotli watcher
 brew link --overwrite --force shivammathur/php/php-zts
 
-
+export CGO_CFLAGS="$(php-config --includes) -I$(brew --prefix)/include"
+export CGO_LDFLAGS="$(php-config --ldflags) $(php-config --libs) -L$(brew --prefix)/lib" 
 export LD_LIBRARY_PATH=/home/linuxbrew/.linuxbrew/lib:$LD_LIBRARY_PATH
 
 ./mbuilderv1 php-server --listen :8080 --root ./public
